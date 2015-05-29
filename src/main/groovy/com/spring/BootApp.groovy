@@ -100,7 +100,7 @@ class BootApp extends SpringBootServletInitializer {
         List<Person> findByCity(String title) {
             def personList = Person.executeQuery('select from Person where city[title]=?', title)
             personList.each { Person person ->
-                person.city // we must access it inside transaction
+                person.city // we must access it inside transaction, take a look at OrientDB fetch plan explanation
             }
             personList
         }
