@@ -41,7 +41,7 @@ class BootApp extends SpringBootServletInitializer {
     }
 
     Map transform(Person person) {
-        [rid: person.id, firstName: person.firstName, lastName: person.lastName, city: person.city.title]
+        [rid: person.id, firstName: person.firstName, lastName: person.lastName, city: person.profile?.city?.title]
     }
 
     @Override
@@ -49,10 +49,6 @@ class BootApp extends SpringBootServletInitializer {
         application.sources BootApp
     }
 
-    /**
-     * Для запуска на машине разработчика
-     * @param args
-     */
     static void main(String[] args) {
         SpringApplication.run BootApp, args
     }
@@ -71,6 +67,7 @@ class BootApp extends SpringBootServletInitializer {
         ODatabaseDocumentTx databaseTx = new ODatabaseDocumentTx(URL).create()
         databaseTx.getMetadata().getSchema().createClass(Person)
         databaseTx.getMetadata().getSchema().createClass(City)
+        databaseTx.getMetadata().getSchema().createClass(Profile)
         databaseTx.close()
         def manager = new OrientDocumentDatabaseFactory()
         manager.setUrl(URL)
@@ -91,18 +88,16 @@ class BootApp extends SpringBootServletInitializer {
 
         @Transactional(value = 'orient')
         Person createPerson(String firstName, String lastName, String cityTitle) {
-            def person = new Person(firstName: firstName, lastName: lastName, city: new City(title: cityTitle))
+            def profile = new Profile(city: new City(title: cityTitle), isPublic: true,
+                    phones: ['+9999999999', '+888888888', '+777777777'])
+            def person = new Person(firstName: firstName, lastName: lastName, profile: profile)
             person.save()
             person
         }
 
         @Transactional('orient')
         List<Person> findByCity(String title) {
-            def personList = Person.executeQuery('select from Person where city[title]=?', title)
-            personList.each { Person person ->
-                person.city // we must access it inside transaction, take a look at OrientDB fetch plan explanation
-            }
-            personList
+            Person.executeQuery('select from Person where profile[city][title]=?', title)
         }
     }
 }

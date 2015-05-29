@@ -10,11 +10,11 @@ class Person {
     String id
     String firstName
     String lastName
-    City city
+    Profile profile
 
     static mapping = {
         id(field: '@rid')
-        city(type: OType.LINK)
+        profile(type: OType.EMBEDDED)
     }
 }
 
@@ -29,3 +29,14 @@ class City {
     }
 }
 
+@CompileStatic
+@OrientDocument
+class Profile {
+    Boolean isPublic
+    List<String> phones
+    City city
+
+    static mapping = {
+        city(type: OType.LINK, fetch: 'eager')
+    }
+}
