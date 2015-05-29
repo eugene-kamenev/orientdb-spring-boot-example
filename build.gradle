@@ -1,0 +1,61 @@
+buildscript {
+    repositories {
+        maven { url 'http://repo.spring.io/libs-release' }
+        mavenLocal()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.springframework.boot:spring-boot-gradle-plugin:1.2.3.RELEASE'
+    }
+}
+
+apply plugin: 'spring-boot'
+apply plugin: 'war'
+apply plugin: 'groovy'
+apply plugin: 'idea'
+
+def tomcat = '8.0.3'
+
+war {
+    baseName = 'gorient-sample'
+    version = '0.1.0'
+}
+
+configurations.all {
+    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+        if (details.requested.group == 'org.apache.tomcat.embed') {
+            details.useVersion tomcat
+        }
+    }
+}
+
+configurations {
+    providedRuntime
+}
+
+def groovy = '2.4.3'
+
+repositories {
+    jcenter()
+    maven { url 'http://maven.springframework.org/milestone' }
+    maven { url 'http://maven.springframework.org/release' }
+    maven { url 'http://repo.spring.io/snapshot' }
+}
+
+dependencies {
+    compile project(':orient-groovy')
+    compile "org.codehaus.groovy:groovy-all:${groovy}"
+    compile 'org.springframework.boot:spring-boot-starter-web'
+    compile 'org.springframework:spring-tx'
+    compile "com.orientechnologies:orientdb-core:2.1-rc3"
+    compile "com.orientechnologies:orientdb-client:2.1-rc3"
+    compile "org.ops4j.orient:orient-spring-tx:0.3.0"
+    testCompile 'org.spockframework:spock-core:0.7-groovy-2.0'
+}
+
+sourceSets {
+    main.resources {
+        srcDir file('src/main/groovy/')
+        srcDir file('src/main/resources/')
+    }
+}
