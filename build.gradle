@@ -46,10 +46,8 @@ dependencies {
     compile project(':orient-groovy')
     compile "org.codehaus.groovy:groovy-all:${groovy}"
     compile 'org.springframework.boot:spring-boot-starter-web'
-    compile 'org.springframework:spring-tx'
-    compile "com.orientechnologies:orientdb-core:2.1-rc3"
-    compile "com.orientechnologies:orientdb-client:2.1-rc3"
-    compile "org.ops4j.orient:orient-spring-tx:0.3.0"
+    compile "com.orientechnologies:orientdb-core:2.1-rc4"
+    compile "com.orientechnologies:orientdb-client:2.1-rc4"
     testCompile 'org.spockframework:spock-core:0.7-groovy-2.0'
 }
 

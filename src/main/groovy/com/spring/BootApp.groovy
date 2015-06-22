@@ -1,47 +1,85 @@
 package com.spring
-
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentTx
-import org.ops4j.orient.spring.tx.OrientDocumentDatabaseFactory
-import org.ops4j.orient.spring.tx.OrientTransactionManager
+import com.spring.model.City
+import com.spring.model.Person
+import com.spring.model.Profile
+import com.spring.model.Visited
+import com.tinkerpop.blueprints.impls.orient.OrientGraph
+import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory
+import groovy.transform.CompileStatic
+import groovy.transform.stc.ClosureParams
+import groovy.transform.stc.FromString
+import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.SpringApplication
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration
 import org.springframework.boot.builder.SpringApplicationBuilder
 import org.springframework.boot.context.web.SpringBootServletInitializer
+import org.springframework.context.ApplicationListener
 import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.EnableTransactionManagement
-import org.springframework.transaction.annotation.Transactional
+import org.springframework.context.event.ContextRefreshedEvent
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestMethod
-import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 
-@Configuration
 @EnableAutoConfiguration
-@EnableTransactionManagement
+@Slf4j
 @RestController
-class BootApp extends SpringBootServletInitializer {
+@CompileStatic
+class BootApp extends SpringBootServletInitializer implements ApplicationListener<ContextRefreshedEvent> {
+
     @Autowired
-    OrientService service
+    OrientGraphFactory graphFactory
 
-    @RequestMapping(name = '/create', method = RequestMethod.POST)
-    def create(@RequestParam String firstName, @RequestParam String lastName, @RequestParam String cityTitle) {
-        def person = service.createPerson(firstName, lastName, cityTitle)
-        // person.toJSON()
-        return transform(person)
-    }
-
-    @RequestMapping(name = '/show', method = RequestMethod.GET)
-    def show(@RequestParam String cityTitle) {
-        service.findByCity(cityTitle).collect {
-            transform(it)
+    /**
+        *  Create entities on startup
+        * @param event
+        */
+    @Override
+    void onApplicationEvent(ContextRefreshedEvent event) {
+        withTransaction(graphFactory) {
+            def cities = [new City(title: 'Amsterdam'),
+                          new City(title: 'New York'),
+                          new City(title: 'London')]
+            50.times {
+                def livesIn = cities[new Random().nextInt(3)]
+                def profile = new Profile(livesIn: livesIn)
+                def person = new Person(firstName: "Test Person $it", lastName: "Last Name $it", profile: profile)
+                Visited visit = person.addToVisitedCities(livesIn)
+                visit.on = new Date()
+            }
         }
     }
 
-    Map transform(Person person) {
-        [rid: person.id, firstName: person.firstName, lastName: person.lastName, city: person.profile?.city?.title]
+    @RequestMapping('/persons')
+    def persons() {
+        withTransaction(graphFactory) {
+            personsToJSON((List<Person>) Person.graphQuery('select from Person'))
+        }
+    }
+
+    @RequestMapping('/cities')
+    def cities() {
+        withTransaction(graphFactory) {
+            citiesToJSON((List<City>) City.graphQuery('select from City'))
+        }
+    }
+
+    static List personsToJSON(List<Person> persons) {
+        persons.collect { person ->
+            [rid          : person.id.toString(),
+             firstName    : person.firstName,
+             lastName     : person.lastName,
+             city         : person.profile?.livesIn?.title,
+             visited      : person.vertex.pipe().in('Visited').count(),
+             notYetVisited: person.notVisitedCities.size()]
+        }
+    }
+
+    static List citiesToJSON(List<City> cities) {
+        cities.collect { city ->
+            [rid         : city.id.toString(),
+             title       : city.title,
+             totalVisited: city.vertex.pipe().out('Visited').count()]
+        }
     }
 
     @Override
@@ -53,51 +91,39 @@ class BootApp extends SpringBootServletInitializer {
         SpringApplication.run BootApp, args
     }
 
-    private static final String URL = 'memory:test'
-    private static final String USER = 'admin'
-    private static final String PASSWORD = 'admin'
-
-    @Bean(name = 'orient')
-    public OrientTransactionManager transactionManager() {
-        new OrientTransactionManager(databaseManager: databaseFactory())
+    /**
+        * I didnt checked, but read this: http://orientdb.com/docs/last/Transaction-propagation.html
+        *  Nested transactions should work in OrientDB 2.1
+        * @param dbf
+        * @param closure
+        * @return
+        */
+    static <T> T withTransaction(OrientGraphFactory dbf,
+                                 @ClosureParams(value = FromString, options = 'com.tinkerpop.blueprints.impls.orient.OrientGraph')
+                                         Closure<T> closure) {
+        def orientGraph = (OrientGraph) OrientGraph.activeGraph
+        if (!orientGraph) {
+            orientGraph = dbf.getTx()
+        }
+        try {
+            orientGraph.begin()
+            def result = closure.call(orientGraph)
+            orientGraph.commit()
+            return result
+        } catch (Exception e) {
+            log.error('EXCEPTION IN TRANSACTION', e)
+            orientGraph.rollback()
+        } finally {
+            orientGraph.shutdown(false)
+        }
+        return null
     }
 
     @Bean
-    public OrientDocumentDatabaseFactory databaseFactory() {
-        ODatabaseDocumentTx databaseTx = new ODatabaseDocumentTx(URL).create()
-        databaseTx.getMetadata().getSchema().createClass(Person)
-        databaseTx.getMetadata().getSchema().createClass(City)
-        databaseTx.getMetadata().getSchema().createClass(Profile)
-        databaseTx.close()
-        def manager = new OrientDocumentDatabaseFactory()
-        manager.setUrl(URL)
-        manager.setUsername(USER)
-        manager.setPassword(PASSWORD)
-        manager
-    }
-
-    @Bean
-    public OrientService orientService() {
-        new OrientService()
-    }
-
-    @Service
-    static class OrientService {
-        @Autowired
-        OrientDocumentDatabaseFactory dbf
-
-        @Transactional(value = 'orient')
-        Person createPerson(String firstName, String lastName, String cityTitle) {
-            def profile = new Profile(city: new City(title: cityTitle), isPublic: true,
-                    phones: ['+9999999999', '+888888888', '+777777777'])
-            def person = new Person(firstName: firstName, lastName: lastName, profile: profile)
-            person.save()
-            person
-        }
-
-        @Transactional('orient')
-        List<Person> findByCity(String title) {
-            Person.executeQuery('select from Person where profile[city][title]=?', title)
-        }
+    public OrientGraphFactory databaseFactory() {
+        // change to 'remote:host/dbname' if persistent storage needed
+        def factory = new OrientGraphFactory("plocal:/tmp/test")
+        factory.database.drop()
+        factory
     }
 }
