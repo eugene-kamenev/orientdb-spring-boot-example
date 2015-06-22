@@ -1,4 +1,4 @@
-package com.spring.model
+package com.spring
 
 import com.groovy.orient.graph.Edge
 import com.groovy.orient.graph.Vertex

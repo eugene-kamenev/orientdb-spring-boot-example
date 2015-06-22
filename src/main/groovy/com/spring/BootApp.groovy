@@ -1,8 +1,5 @@
 package com.spring
-import com.spring.model.City
-import com.spring.model.Person
-import com.spring.model.Profile
-import com.spring.model.Visited
+
 import com.tinkerpop.blueprints.impls.orient.OrientGraph
 import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory
 import groovy.transform.CompileStatic
