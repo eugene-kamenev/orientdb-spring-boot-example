@@ -1,10 +1,7 @@
 package com.spring
 
-import com.tinkerpop.blueprints.impls.orient.OrientGraph
 import com.tinkerpop.blueprints.impls.orient.OrientGraphFactory
 import groovy.transform.CompileStatic
-import groovy.transform.stc.ClosureParams
-import groovy.transform.stc.FromString
 import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.SpringApplication
@@ -32,7 +29,7 @@ class BootApp extends SpringBootServletInitializer implements ApplicationListene
         */
     @Override
     void onApplicationEvent(ContextRefreshedEvent event) {
-        withTransaction(graphFactory) {
+        graphFactory.withTransaction {
             def cities = [new City(title: 'Amsterdam'),
                           new City(title: 'New York'),
                           new City(title: 'London')]
@@ -48,20 +45,20 @@ class BootApp extends SpringBootServletInitializer implements ApplicationListene
 
     @RequestMapping('/persons')
     def persons() {
-        withTransaction(graphFactory) {
-            personsToJSON((List<Person>) Person.graphQuery('select from Person'))
+        graphFactory.withTransaction { graph ->
+            personsToJSON(Person.graphQuery('select from Person'))
         }
     }
 
     @RequestMapping('/cities')
     def cities() {
-        withTransaction(graphFactory) {
-            citiesToJSON((List<City>) City.graphQuery('select from City'))
+        graphFactory.withTransaction { graph ->
+            citiesToJSON(City.graphQuery('select from City'))
         }
     }
 
-    static List personsToJSON(List<Person> persons) {
-        persons.collect { person ->
+    static List personsToJSON(def persons) {
+        persons.collect { Person person ->
             [rid          : person.id.toString(),
              firstName    : person.firstName,
              lastName     : person.lastName,
@@ -71,8 +68,8 @@ class BootApp extends SpringBootServletInitializer implements ApplicationListene
         }
     }
 
-    static List citiesToJSON(List<City> cities) {
-        cities.collect { city ->
+    static List citiesToJSON(def cities) {
+        cities.collect { City city ->
             [rid         : city.id.toString(),
              title       : city.title,
              totalVisited: city.vertex.pipe().out('Visited').count()]
@@ -88,39 +85,10 @@ class BootApp extends SpringBootServletInitializer implements ApplicationListene
         SpringApplication.run BootApp, args
     }
 
-    /**
-        * I didnt checked, but read this: http://orientdb.com/docs/last/Transaction-propagation.html
-        *  Nested transactions should work in OrientDB 2.1
-        * @param dbf
-        * @param closure
-        * @return
-        */
-    static <T> T withTransaction(OrientGraphFactory dbf,
-                                 @ClosureParams(value = FromString, options = 'com.tinkerpop.blueprints.impls.orient.OrientGraph')
-                                         Closure<T> closure) {
-        def orientGraph = (OrientGraph) OrientGraph.activeGraph
-        if (!orientGraph) {
-            orientGraph = dbf.getTx()
-        }
-        try {
-            orientGraph.begin()
-            def result = closure.call(orientGraph)
-            orientGraph.commit()
-            return result
-        } catch (Exception e) {
-            log.error('EXCEPTION IN TRANSACTION', e)
-            orientGraph.rollback()
-        } finally {
-            orientGraph.shutdown(false)
-        }
-        return null
-    }
-
     @Bean
     public OrientGraphFactory databaseFactory() {
         // change to 'remote:host/dbname' if persistent storage needed
-        def factory = new OrientGraphFactory("plocal:/tmp/test")
-        factory.database.drop()
+        def factory = new OrientGraphFactory("memory:test")
         factory
     }
 }

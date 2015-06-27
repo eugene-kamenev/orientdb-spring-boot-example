@@ -5,7 +5,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'org.springframework.boot:spring-boot-gradle-plugin:1.2.3.RELEASE'
+        classpath 'org.springframework.boot:spring-boot-gradle-plugin:1.2.4.RELEASE'
     }
 }
 
@@ -14,32 +14,16 @@ apply plugin: 'war'
 apply plugin: 'groovy'
 apply plugin: 'idea'
 
-def tomcat = '8.0.3'
-
 war {
     baseName = 'gorient-sample'
     version = '0.1.0'
-}
-
-configurations.all {
-    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-        if (details.requested.group == 'org.apache.tomcat.embed') {
-            details.useVersion tomcat
-        }
-    }
-}
-
-configurations {
-    providedRuntime
 }
 
 def groovy = '2.4.3'
 
 repositories {
     jcenter()
-    maven { url 'http://maven.springframework.org/milestone' }
     maven { url 'http://maven.springframework.org/release' }
-    maven { url 'http://repo.spring.io/snapshot' }
 }
 
 dependencies {
