@@ -17,8 +17,6 @@ Person->Visited<-City<-[livesIn]Profile<-Person
 Database will be created automatically, no need of OrientDB download.
 Just
 ```bash
-git submodule init
-git submodule update
 gradle bootRun
 ```
 
