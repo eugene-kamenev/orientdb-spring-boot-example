@@ -19,19 +19,19 @@ war {
     version = '0.1.0'
 }
 
-def groovy = '2.4.3'
+def groovy = '2.4.4'
 
 repositories {
     jcenter()
-    maven { url 'http://maven.springframework.org/release' }
+    maven {
+        url 'https://dl.bintray.com/eugene-kamenev/maven'
+    }
 }
 
 dependencies {
-    compile project(':orient-groovy')
-    compile "org.codehaus.groovy:groovy-all:${groovy}"
     compile 'org.springframework.boot:spring-boot-starter-web'
-    compile "com.orientechnologies:orientdb-core:2.1-rc4"
-    compile "com.orientechnologies:orientdb-client:2.1-rc4"
+    compile "org.codehaus.groovy:groovy-all:${groovy}"
+    compile "com.github.eugene-kamenev:orientdb-groovy:0.1.0"
     testCompile 'org.spockframework:spock-core:0.7-groovy-2.0'
 }
 

@@ -1,7 +1,7 @@
 package com.spring
 
-import com.groovy.orient.graph.Edge
-import com.groovy.orient.graph.Vertex
+import com.github.eugene.kamenev.orient.graph.Edge
+import com.github.eugene.kamenev.orient.graph.Vertex
 import com.orientechnologies.orient.core.metadata.schema.OType
 import groovy.transform.CompileStatic
 

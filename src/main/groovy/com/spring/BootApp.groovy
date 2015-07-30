@@ -52,7 +52,7 @@ class BootApp extends SpringBootServletInitializer implements ApplicationListene
     @Bean
     public OrientGraphFactory databaseFactory() {
         // change to 'remote:host/dbname' if persistent storage needed
-        def factory = new OrientGraphFactory("remote:/test").setupPool(1, 20)
+        def factory = new OrientGraphFactory("memory:test").setupPool(1, 20)
         factory
     }
 
