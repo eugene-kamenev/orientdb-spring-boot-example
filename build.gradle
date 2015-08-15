@@ -16,23 +16,20 @@ apply plugin: 'idea'
 
 war {
     baseName = 'gorient-sample'
-    version = '0.1.0'
+    version = '0.1.1'
 }
 
 def groovy = '2.4.4'
 
 repositories {
+    mavenLocal()
     jcenter()
-    maven {
-        url 'https://dl.bintray.com/eugene-kamenev/maven'
-    }
 }
 
 dependencies {
     compile 'org.springframework.boot:spring-boot-starter-web'
     compile "org.codehaus.groovy:groovy-all:${groovy}"
-    compile "com.github.eugene-kamenev:orientdb-groovy:0.1.0"
-    testCompile 'org.spockframework:spock-core:0.7-groovy-2.0'
+    compile "com.github.eugene-kamenev:orientdb-groovy:0.1.1"
 }
 
 sourceSets {
